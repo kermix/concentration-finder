@@ -1,2 +1,6 @@
 # Project exclude paths
-/venv/
+venv
+*.pyc
+.DS_Store
+.env
+.idea
