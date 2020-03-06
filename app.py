@@ -109,7 +109,7 @@ app.layout = html.Div([
                                 id='trace-input',
                                 placeholder="Enter new trace name",
                                 style={'margin': "5px 5px 0 0", 'float': 'left'}),
-                            html.Button("Add trace", style={'margin': "5px 0 0 5px"}),
+                            html.Button("Add trace", style={'margin': "5px 0 0 0"}),
                         ],
                     ),
                 ], style={'flex': '2', 'padding': '0 10px'})
