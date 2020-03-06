@@ -71,7 +71,7 @@ app.layout = html.Div([
                                     n_clicks=0,
                                     style={'margin': "5px 5px 0 0"}),
                         html.Button(
-                            "Update",
+                            "Update Plot",
                             id="button-std-x-update",
                             n_clicks=0,
                             style={'margin': "5px 0 0 0"})
@@ -160,24 +160,7 @@ def parse_contents(contents, filename, date):
             [
                 html.Div(
                     [
-                        html.P("Manage Data", style={'float: right'}),
-                        html.Button(
-                            'To Standard',
-                            id='button-add-to-standard',
-                            n_clicks=0,
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
-                        ),
-                        html.Button(
-                            'To data',
-                            id='button-add-to trace',
-                            n_clicks=0,
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
-                        )
-                    ], className="container"
-                ),
-                html.Div(
-                    [
-                        html.P("Manage Table", style={'float: right'}),
+                        html.P("Manage Table"),
                         dcc.Input(
                             id='editing-columns-name',
                             placeholder='Enter a column name...',
@@ -198,6 +181,24 @@ def parse_contents(contents, filename, date):
                         ),
                     ], className="container"
                 ),
+                html.Div(
+                    [
+                        html.P("Manage Data"),
+                        html.Button(
+                            'Add to Standard',
+                            id='button-add-to-standard',
+                            n_clicks=0,
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        ),
+                        html.Button(
+                            'Add to data',
+                            id='button-add-to trace',
+                            n_clicks=0,
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        )
+                    ], className="container"
+                )
+
             ], style={'flex': '1'}),
     ], style={'display': 'flex'})
 
