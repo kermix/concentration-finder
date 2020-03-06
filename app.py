@@ -62,11 +62,14 @@ app.layout = html.Div([
                 id='table-std-x',
                 columns=[{"id": "x", "name": "Concentration"}],
                 data=[
-                    dict(x=0) for _ in range(1, 8)
+                    dict(x=0) for _ in range(8)
                 ],
                 editable=True,
                 row_deletable=True),
-            html.Button("Add x", style={'margin': "10px 10px 10px 0"}),
+            html.Button("Add x",
+                        id='button-add-x-std',
+                        n_clicks=0,
+                        style={'margin': "10px 10px 10px 0"}),
             html.Button(
                 "Update Plot",
                 id="button-std-x-update",
@@ -214,6 +217,18 @@ def update_std_x(n_clicks, xdata):
     new_xdata = sorted([float(item['x']) for item in xdata])
 
     return new_xdata
+
+@app.callback(
+    Output('table-std-x', 'data'),
+    [Input('button-add-x-std', 'n_clicks')],
+    [State('table-std-x', 'data'),
+     State('table-std-x', 'columns')])
+def add_row(n_clicks, rows, columns):
+    if int(n_clicks) < 1:
+        raise PreventUpdate
+
+    rows.append(dict(x=0))
+    return rows
 
 
 @app.callback(
