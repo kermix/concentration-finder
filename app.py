@@ -30,14 +30,14 @@ app.layout = html.Div([
             html.A('Select Files')
         ]),
         style={
-            'width': 'calc(100% - 20px)',
-            'height': '60px',
-            'lineHeight': '60px',
+            'width': 'calc(100% - 10px)',
+            'height': '20px',
+            'lineHeight': '20px',
             'borderWidth': '1px',
             'borderStyle': 'dashed',
             'borderRadius': '5px',
             'textAlign': 'center',
-            'margin': '10px'
+            'margin': '5px'
         },
         # Allow multiple files to be uploaded
         multiple=True
@@ -56,7 +56,7 @@ app.layout = html.Div([
         ], style={'flex': '1'}),
         html.Div([
             html.Div([
-                html.H4("Set concentrations"),
+                html.H5("Set concentrations"),
                 dash_table.DataTable(
                     id='table-std-x',
                     columns=[{"id": "x", "name": "Concentration"}],
@@ -68,17 +68,17 @@ app.layout = html.Div([
                 html.Button("Add x",
                             id='button-add-x-std',
                             n_clicks=0,
-                            style={'margin': "10px 10px 10px 0"}),
+                            style={'margin': "5px 5px 5px 0"}),
                 html.Button(
                     "Update Plot",
                     id="button-std-x-update",
                     n_clicks=0,
                     style={'margin': 10}),
-            ], style={'flex': '1', 'padding': '0 20px'}),
+            ], style={'flex': '1', 'padding': '0 10px'}),
             html.Div(
                 [
-                    html.H4("Set traces"),
-                    html.H5("Standard"),
+                    html.H5("Set traces"),
+                    html.H6("Standard"),
                     dcc.Dropdown(
                         id="dropdown-standard",
                         style={'float': 'left', 'width': 350},
@@ -88,25 +88,26 @@ app.layout = html.Div([
                         "Update standard",
                         id="button-std-y-update",
                         n_clicks=0,
-                        style={'margin': "0 10px"}),
-                    html.Hr(),
-                    html.H5('Data'),
+                        style={'margin': "0 5px"}),
+                    html.H6('Data'),
                     html.Label(
                         [
                             "Manage traces",
                             dcc.Dropdown(id="traces-dropdown"),
                         ],
                     ),
-                    html.Button("Update traces", style={'margin': "10px 0 0 0"}),
                     html.Label(
                         [
                             "New trace",
                             dcc.Dropdown(id="trace-dropdown"),
-                            dcc.Input(id='trace-input', placeholder="Enter new trace name", style={'margin': "10px 0 0 0"})
+                            dcc.Input(
+                                id='trace-input',
+                                placeholder="Enter new trace name",
+                                style={'margin': "5px 5px 0 0", 'float': 'left'}),
+                            html.Button("Add trace", style={'margin': "5px 0 0 5px"}),
                         ],
                     ),
-                    html.Button("Add trace", style={'margin': "10px 0 0 0"}),
-                ], style={'flex': '2', 'padding': '0 20px'})
+                ], style={'flex': '2', 'padding': '0 10px'})
             ], style={'flex': '1', 'display': 'flex', 'overflowY': 'auto'})
     ], style={'display': 'flex', 'height': '400px'}),
     html.Div(id='output-data-upload'),
