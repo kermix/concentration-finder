@@ -169,11 +169,9 @@ def parse_contents(contents, filename, date):
               [Input('upload-data', 'contents')],
               [State('upload-data', 'filename'),
                State('upload-data', 'last_modified')])
-def update_output(list_of_contents, list_of_names, list_of_dates):
-    if list_of_contents is not None:
-        children = [
-            parse_contents(c, n, d) for c, n, d in
-            zip(list_of_contents, list_of_names, list_of_dates)]
+def update_output(content, name, date):
+    if content is not None:
+        children = [parse_contents(content, name, date)]
         return children
 
 
