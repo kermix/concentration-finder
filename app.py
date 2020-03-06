@@ -47,68 +47,68 @@ app.layout = html.Div([
             dcc.Graph(id='graph',
                       figure=dict(
                           layout=dict(
-                              width=900,
-                              height=500,
                               yaxis=dict(
                                   scaleanchor="x",
                                   scaleratio=1,
                               )
                           )
                       )),
-        ], style={'flex': '6'}),
+        ], style={'flex': '1'}),
         html.Div([
-            html.H4("Set concentrations"),
-            dash_table.DataTable(
-                id='table-std-x',
-                columns=[{"id": "x", "name": "Concentration"}],
-                data=[
-                    dict(x=0) for _ in range(8)
-                ],
-                editable=True,
-                row_deletable=True),
-            html.Button("Add x",
-                        id='button-add-x-std',
-                        n_clicks=0,
-                        style={'margin': "10px 10px 10px 0"}),
-            html.Button(
-                "Update Plot",
-                id="button-std-x-update",
-                n_clicks=0,
-                style={'margin': 10}),
-        ], style={'flex': '2', 'padding': '0 20px', 'overflowY': 'auto'}),
-        html.Div(
-            [
-                html.H4("Set traces"),
-                html.H5("Standard"),
-                dcc.Dropdown(
-                    id="dropdown-standard",
-                    style={'float': 'left', 'width': 350},
-                    multi=True
-                ),
+            html.Div([
+                html.H4("Set concentrations"),
+                dash_table.DataTable(
+                    id='table-std-x',
+                    columns=[{"id": "x", "name": "Concentration"}],
+                    data=[
+                        dict(x=0) for _ in range(8)
+                    ],
+                    editable=True,
+                    row_deletable=True),
+                html.Button("Add x",
+                            id='button-add-x-std',
+                            n_clicks=0,
+                            style={'margin': "10px 10px 10px 0"}),
                 html.Button(
-                    "Update standard",
-                    id="button-std-y-update",
+                    "Update Plot",
+                    id="button-std-x-update",
                     n_clicks=0,
-                    style={'margin': "0 10px"}),
-                html.Hr(),
-                html.H5('Data'),
-                html.Label(
-                    [
-                        "Manage traces",
-                        dcc.Dropdown(id="traces-dropdown"),
-                    ],
-                ),
-                html.Button("Update traces", style={'margin': "10px 0 0 0"}),
-                html.Label(
-                    [
-                        "New trace",
-                        dcc.Dropdown(id="trace-dropdown"),
-                        dcc.Input(id='trace-input', placeholder="Enter new trace name", style={'margin': "10px 0 0 0"})
-                    ],
-                ),
-                html.Button("Add trace", style={'margin': "10px 0 0 0"}),
-            ], style={'flex': '4', 'padding': '0 20px'})
-    ], style={'display': 'flex', 'height': '500px'}),
+                    style={'margin': 10}),
+            ], style={'flex': '1', 'padding': '0 20px'}),
+            html.Div(
+                [
+                    html.H4("Set traces"),
+                    html.H5("Standard"),
+                    dcc.Dropdown(
+                        id="dropdown-standard",
+                        style={'float': 'left', 'width': 350},
+                        multi=True
+                    ),
+                    html.Button(
+                        "Update standard",
+                        id="button-std-y-update",
+                        n_clicks=0,
+                        style={'margin': "0 10px"}),
+                    html.Hr(),
+                    html.H5('Data'),
+                    html.Label(
+                        [
+                            "Manage traces",
+                            dcc.Dropdown(id="traces-dropdown"),
+                        ],
+                    ),
+                    html.Button("Update traces", style={'margin': "10px 0 0 0"}),
+                    html.Label(
+                        [
+                            "New trace",
+                            dcc.Dropdown(id="trace-dropdown"),
+                            dcc.Input(id='trace-input', placeholder="Enter new trace name", style={'margin': "10px 0 0 0"})
+                        ],
+                    ),
+                    html.Button("Add trace", style={'margin': "10px 0 0 0"}),
+                ], style={'flex': '2', 'padding': '0 20px'})
+            ], style={'flex': '1', 'display': 'flex', 'overflowY': 'auto'})
+    ], style={'display': 'flex', 'height': '400px'}),
     html.Div(id='output-data-upload'),
     dcc.Store(id='memory-std-xdata'),
     dcc.Store(id='memory-std-ydata'),
