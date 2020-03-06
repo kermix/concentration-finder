@@ -55,45 +55,51 @@ app.layout = html.Div([
         ], style={'flex': '1'}),
         html.Div([
             html.Div([
-                html.H5("Set concentrations"),
-                dash_table.DataTable(
-                    id='table-std-x',
-                    columns=[{"id": "x", "name": "Concentration"}],
-                    data=[
-                        dict(x=0) for _ in range(8)
-                    ],
-                    editable=True,
-                    row_deletable=True),
-                html.Button("Add x",
-                            id='button-add-x-std',
+                html.Label(
+                    [
+                        "Set concentrations",
+                        dash_table.DataTable(
+                            id='table-std-x',
+                            columns=[{"id": "x", "name": "Concentration"}],
+                            data=[
+                                dict(x=0) for _ in range(8)
+                            ],
+                            editable=True,
+                            row_deletable=True),
+                        html.Button("Add x",
+                                    id='button-add-x-std',
+                                    n_clicks=0,
+                                    style={'margin': "5px 5px 0 0"}),
+                        html.Button(
+                            "Update Plot",
+                            id="button-std-x-update",
                             n_clicks=0,
-                            style={'margin': "5px 5px 5px 0"}),
-                html.Button(
-                    "Update Plot",
-                    id="button-std-x-update",
-                    n_clicks=0,
-                    style={'margin': 10}),
+                            style={'margin': "5px 0 0 0"})
+                    ]
+                )
             ], style={'flex': '1', 'padding': '0 10px'}),
             html.Div(
                 [
-                    html.H5("Set traces"),
-                    html.H6("Standard"),
-                    dcc.Dropdown(
-                        id="dropdown-standard",
-                        style={'float': 'left', 'width': 350},
-                        multi=True
+                    html.Label(
+                        [
+                            "Set Standard",
+                            dcc.Dropdown(
+                                id="dropdown-standard",
+                                multi=True
+                            ),
+                            html.Button(
+                                "Update standard",
+                                id="button-std-y-update",
+                                n_clicks=0,
+                                style={'margin': "5px 0 0 0"}
+                            ),
+                        ]
                     ),
-                    html.Button(
-                        "Update standard",
-                        id="button-std-y-update",
-                        n_clicks=0,
-                        style={'margin': "0 5px"}),
-                    html.H6('Data'),
                     html.Label(
                         [
                             "Manage traces",
-                            dcc.Dropdown(id="traces-dropdown"),
-                        ],
+                            dcc.Dropdown(id="traces-dropdown")
+                        ]
                     ),
                     html.Label(
                         [
@@ -107,7 +113,7 @@ app.layout = html.Div([
                         ],
                     ),
                 ], style={'flex': '2', 'padding': '0 10px'})
-            ], style={'flex': '1', 'display': 'flex', 'overflowY': 'auto'})
+        ], style={'flex': '1', 'display': 'flex', 'overflowY': 'auto'})
     ], style={'display': 'flex', 'height': '400px'}),
     html.Div(id='output-data-upload'),
     dcc.Store(id='memory-std-xdata'),
@@ -139,30 +145,62 @@ def parse_contents(contents, filename, date):
         ])
 
     return html.Div([
-        html.Div([
-            dcc.Input(
-                id='editing-columns-name',
-                placeholder='Enter a column name...',
-                value='',
-                style={'padding': 10}
-            ),
-            html.Button('Add Column', id='editing-columns-button', n_clicks=0, style={'margin': 10}),
-            html.Button('Add Row', id='editing-rows-button', n_clicks=0, style={'margin': 10}),
-            html.Button('Add to Standard', id='button-add-to-standard', n_clicks=0,
-                        style={'float': 'right', 'margin': 10}),
-            html.Button('Add to data',
-                        id='button-add-to trace',
-                        n_clicks=0,
-                        style={'float': 'right', 'margin': 10})
-        ], style={'height': 50}),
-        dash_table.DataTable(
-            data=df.to_dict('records'),
-            columns=[{"name": str(i), "id": str(i)} for i in df.columns],
-            id='table-data',
-            editable=True,
-            row_deletable=True
+        html.Div(
+            [
+                dash_table.DataTable(
+                    data=df.to_dict('records'),
+                    columns=[{"name": str(i), "id": str(i)} for i in df.columns],
+                    id='table-data',
+                    editable=True,
+                    row_deletable=True
+                ),
+            ], style={'flex': '3'}
         ),
-    ])
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.P("Manage Table"),
+                        dcc.Input(
+                            id='editing-columns-name',
+                            placeholder='Enter a column name...',
+                            value='',
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        ),
+                        html.Button(
+                            'Add Column',
+                            id='editing-columns-button',
+                            n_clicks=0,
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        ),
+                        html.Button(
+                            'Add Row',
+                            id='editing-rows-button',
+                            n_clicks=0,
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        ),
+                    ], className="container"
+                ),
+                html.Div(
+                    [
+                        html.P("Manage Data"),
+                        html.Button(
+                            'Add to Standard',
+                            id='button-add-to-standard',
+                            n_clicks=0,
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        ),
+                        html.Button(
+                            'Add to data',
+                            id='button-add-to trace',
+                            n_clicks=0,
+                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                        )
+                    ], className="container"
+                )
+
+            ], style={'flex': '1'}),
+    ], style={'display': 'flex'})
 
 
 @app.callback(Output('output-data-upload', 'children'),
@@ -215,6 +253,7 @@ def update_std_x(n_clicks, xdata):
     new_xdata = sorted([float(item['x']) for item in xdata])
 
     return new_xdata
+
 
 @app.callback(
     Output('table-std-x', 'data'),
