@@ -162,13 +162,13 @@ def parse_contents(contents, filename, date):
                     [
                         html.P("Manage Data", style={'float: right'}),
                         html.Button(
-                            'Add to Standard',
+                            'To Standard',
                             id='button-add-to-standard',
                             n_clicks=0,
                             style={'float': 'right', 'margin': '0 5px 5px 0'}
                         ),
                         html.Button(
-                            'Add to data',
+                            'To data',
                             id='button-add-to trace',
                             n_clicks=0,
                             style={'float': 'right', 'margin': '0 5px 5px 0'}
