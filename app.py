@@ -165,13 +165,13 @@ def parse_contents(contents, filename, date):
                             'To Standard',
                             id='button-add-to-standard',
                             n_clicks=0,
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                            style={'float': 'right', 'margin': '0 0 5px 5px'}
                         ),
                         html.Button(
                             'To data',
                             id='button-add-to trace',
                             n_clicks=0,
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                            style={'float': 'right', 'margin': '0 0 5px 5px'}
                         )
                     ], className="container"
                 ),
@@ -182,19 +182,19 @@ def parse_contents(contents, filename, date):
                             id='editing-columns-name',
                             placeholder='Enter a column name...',
                             value='',
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                            style={'float': 'right', 'margin': '0 0 5px 5px'}
                         ),
                         html.Button(
                             'Add Column',
                             id='editing-columns-button',
                             n_clicks=0,
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                            style={'float': 'right', 'margin': '0 0 5px 5px'}
                         ),
                         html.Button(
                             'Add Row',
                             id='editing-rows-button',
                             n_clicks=0,
-                            style={'float': 'right', 'margin': '0 5px 5px 0'}
+                            style={'float': 'right', 'margin': '0 0 5px 5px'}
                         ),
                     ], className="container"
                 ),
