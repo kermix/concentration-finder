@@ -11,7 +11,7 @@ import pandas as pd
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-from regression import FourParametricLogistic, FourParametricLogisticEncoder
+from regression import FourParametricLogistic
 from tools import create_and_mix_color_scale
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
