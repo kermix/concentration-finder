@@ -415,7 +415,8 @@ def update_graph(choosen_standards, xdata, ydata):
                 marker={
                     'size': 10,
                 },
-                name=std
+                name=std,
+                legendgroup=std
             )
         )
         traces.append(
@@ -425,7 +426,8 @@ def update_graph(choosen_standards, xdata, ydata):
                 text=r2_annotation,
                 textposition="top left",
                 mode='lines+text',
-                name=f"{std} curve"
+                name=f"{std} curve",
+                legendgroup=std
             )
         )
 
