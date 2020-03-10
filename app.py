@@ -25,7 +25,7 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Graph(id='graph',
-                      style=dict(height='calc(65vh - 8px)'),
+                      style=dict(height='60vh'),
                       figure=dict(
                           layout=dict(
                               yaxis=dict(
@@ -34,7 +34,7 @@ app.layout = html.Div([
                               )
                           )
                       )),
-        ], style={'flex': '3'}),
+        ], style={'flex': '2'}),
         html.Div([
             html.Details(
                 [
@@ -138,8 +138,8 @@ app.layout = html.Div([
                     html.Summary('Export Analysis', style={'margin': '0 0 5px 0'}),
                 ]
             ),
-        ], style={'flex': '1', 'overflowY': 'auto'})
-    ], style={'display': 'flex', 'height': 'calc(65vh - 8px)'}),
+        ], style={'flex': '1', 'overflowY': 'auto', 'margin': '5px 0'})
+    ], style={'display': 'flex', 'height': '60vh'}),
     html.Div(
         [
             dcc.Upload(
@@ -250,7 +250,7 @@ def parse_contents(contents, filename, date):
                     ], className="container"
                 ),
             ], style={'flex': '1'}),
-    ], style={'display': 'flex', 'height': 'calc(35vh - 8px)'})
+    ], style={'display': 'flex', 'height': '40vh'})
 
 
 @app.callback(Output('output-data-upload', 'children'),
@@ -580,4 +580,4 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(host='0.0.0.0', debug=True)
