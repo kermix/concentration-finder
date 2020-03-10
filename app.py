@@ -51,91 +51,105 @@ app.layout = html.Div([
                               )
                           )
                       )),
-        ], style={'flex': '1'}),
+        ], style={'flex': '3'}),
         html.Div([
-            html.Div([
-                html.Label(
-                    [
-                        "Set concentrations",
-                        dcc.Dropdown(
-                            id='dropdown-concentrations',
-                            multi=True,
-                            style={'margin': '0 0 5px 0'}
-                        ),
-                        html.Div(
-                            [
-                                dcc.Input(
-                                    id='input-new-concentration',
-                                    placeholder='Enter new concentration and press enter',
-                                    debounce=True,
-                                    autoComplete="off",
-                                    style={'width': '100%', 'margin': '0 0 5px 0'}
-                                ),
-                            ],
-                            id="div-new-concentration",
-                        ),
-                        html.Label(
-                            [
-                                "Set Standard",
-                                dcc.Dropdown(
-                                    id="dropdown-standards",
-                                    multi=True,
-                                    style={'margin': '0 0 5px 0'}
-                                ),
-                                html.Div(
-                                    [
-                                        dcc.Dropdown(
-                                            id="dropdown-new-standard",
-                                            multi=True,
-                                            style={'margin': '0 0 5px 0'}
-                                        ),
-                                    ], id="div-new-standard"
-                                ),
-
-                                dcc.Input(
-                                    id='input-new-standard',
-                                    placeholder='Enter new standard name',
-                                    autoComplete="off",
-                                    style={'width': '100%', 'margin': '0 0 5px 0'}
-                                ),
-                                html.Button(
-                                    "Add standard",
-                                    id="button-std-y-add",
-                                    n_clicks=0,
-                                    style={'margin': "5px 0 0 0"}
-                                ),
-                            ]
-                        ),
-                    ]
-                )
-            ], style={'flex': '1', 'padding': '0 10px'}),
-            html.Div(
+            html.Details(
                 [
-                    html.Label(
-                        [
-                            "Manage traces",
-                            dcc.Dropdown(id="traces-dropdown")
-                        ]
+                    html.Summary("Concentrations of standard", style={'margin': '0 0 5px 0'}),
+                    dcc.Dropdown(
+                        placeholder="Concentrations of standard",
+                        id='dropdown-concentrations',
+                        multi=True,
+                        style={'margin': '0 0 5px 0'}
                     ),
-                    html.Label(
+                    html.Div(
                         [
-                            "New trace",
-                            dcc.Dropdown(id="trace-dropdown"),
                             dcc.Input(
-                                id='trace-input',
-                                placeholder="Enter new trace name",
-                                style={'margin': "5px 5px 0 0", 'float': 'left'}),
-                            html.Button("Add trace", style={'margin': "5px 0 0 0"}),
+                                id='input-new-concentration',
+                                placeholder='Enter new concentration and press enter',
+                                debounce=True,
+                                autoComplete="off",
+                                style={'width': '100%', 'margin': '0 0 5px 0'}
+                            ),
                         ],
+                        id="div-new-concentration",
+                    )
+                ]
+            ),
+            html.Details(
+                [
+                    html.Summary("Absorbances of standard", style={'margin': '0 0 5px 0'}),
+                    dcc.Dropdown(
+                        placeholder="Standard curves",
+                        id="dropdown-standards",
+                        multi=True,
+                        style={'margin': '0 0 5px 0'}
                     ),
-                ], style={'flex': '2', 'padding': '0 10px'})
-        ], style={'flex': '1', 'display': 'flex', 'overflowY': 'auto'})
-    ], style={'display': 'flex', 'height': '400px'}),
+                    html.Div(
+                        [
+                            dcc.Dropdown(
+                                placeholder='New standard curve absorbances',
+                                id="dropdown-new-standard",
+                                multi=True,
+                                style={'margin': '0 0 5px 0'}
+                            ),
+                        ], id="div-new-standard"
+                    ),
+
+                    dcc.Input(
+                        id='input-new-standard',
+                        placeholder='Enter new standard curve name',
+                        autoComplete="off",
+                        style={'width': '100%', 'margin': '0 0 5px 0'}
+                    ),
+                    html.Button(
+                        "Add standard curve",
+                        id="button-std-y-add",
+                        n_clicks=0,
+                        style={'margin': "5px 0 0 0"}
+                    ),
+                ]
+            ),
+            html.Details(
+                [
+                    html.Summary('Standard and Model Details'),
+                    html.P(id='p-standards-models')
+                ]
+            ),
+            html.Details(
+                [
+                    html.Summary("Data"),
+                    dcc.Dropdown(
+                        placeholder="Data traces",
+                        id="dropdown-traces",
+                        multi=True
+                    ),
+                    html.Div(
+                        [
+                            dcc.Dropdown(
+                                placeholder='New data trace absorbances',
+                                id="dropdown-new-trace",
+                                multi=True)
+                        ], id='div-new-trace'),
+                    dcc.Input(
+                        id='input-new-trace',
+                        placeholder="Enter new data trace name",
+                        autoComplete="off",
+                        style={'margin': "5px 5px 0 0", 'float': 'left'}),
+                    html.Button("Add trace",
+                                id="button-trace-y-add",
+                                n_clicks=0,
+                                style={'margin': "5px 0 0 0"}),
+                ],
+            ),
+        ], style={'flex': '1', 'overflowY': 'auto'})
+    ], style={'display': 'flex'}),
     html.Div(id='output-data-upload'),
     dcc.Store(id='memory-std-xdata'),
     dcc.Store(id='memory-std-ydata'),
     dcc.Store(id='memory-standards'),
     dcc.Store(id='memory-models'),
+    dcc.Store(id='memory-traces'),
 
 ])
 
@@ -188,7 +202,7 @@ def parse_contents(contents, filename, date):
                         ),
                         html.Button(
                             'To data',
-                            id='button-add-to trace',
+                            id='button-add-to-trace',
                             n_clicks=0,
                             style={'float': 'right', 'margin': '0 0 5px 5px'}
                         )
@@ -332,6 +346,37 @@ def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dro
 
 
 @app.callback(
+    [Output('dropdown-new-trace', 'value'),
+     Output('dropdown-new-trace', 'options')],
+    [Input('button-add-to-trace', 'n_clicks')],
+    [State('table-data', 'selected_cells'),
+     State('table-data', 'data'),
+     State('dropdown-new-trace', 'value'),
+     State('dropdown-new-trace', 'options')]
+)
+def update_trace_dropdown(n_clicks, selected_data, data, dropdown_values, dropdown_options):
+    if int(n_clicks) < 1:
+        raise PreventUpdate
+
+    dropdown_values = [] if dropdown_values is None else dropdown_values
+    dropdown_options = [] if dropdown_options is None else dropdown_options
+
+    options = [option['value'] for option in dropdown_options]
+    for selected_cell in selected_data:
+        row = selected_cell['row']
+        column_id = selected_cell['column_id']
+
+        value = str(data[row][column_id])
+        index = str(data[row]['Index']) + str(column_id)
+        value = ';'.join((value, index))
+        if value not in options:
+            dropdown_options.append({'label': value, 'value': value})
+        dropdown_values.append(value)
+
+    return dropdown_values, dropdown_options
+
+
+@app.callback(
     [Output('div-new-standard', 'children'),
      Output('input-new-standard', 'value'),
      Output('memory-standards', 'data'),
@@ -347,7 +392,7 @@ def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dro
 )
 def update_standards(n_clicks, new_standard_data, new_standard_name, current_standards, dropdown_values,
                      dropdown_options):
-    if int(n_clicks) < 1:
+    if int(n_clicks) < 1 or not new_standard_name:
         raise PreventUpdate
 
     current_standards = {} if current_standards is None else current_standards
@@ -378,43 +423,88 @@ def update_standards(n_clicks, new_standard_data, new_standard_name, current_sta
 
 
 @app.callback(
+    [Output('div-new-trace', 'children'),
+     Output('input-new-trace', 'value'),
+     Output('memory-traces', 'data'),
+     Output('dropdown-traces', 'value'),
+     Output('dropdown-traces', 'options')],
+    [Input('button-trace-y-add', 'n_clicks')],
+    [State('dropdown-new-trace', 'value'),
+     State('input-new-trace', 'value'),
+     State('memory-traces', 'data'),
+     State('dropdown-traces', 'value'),
+     State('dropdown-traces', 'options')
+     ]
+)
+def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, dropdown_values,
+                  dropdown_options):
+    if int(n_clicks) < 1 or not new_trace_name:
+        raise PreventUpdate
+
+    current_traces = {} if current_traces is None else current_traces
+
+    if new_trace_name in current_traces.keys():
+        raise PreventUpdate
+
+    current_traces[new_trace_name] = [(float(yi.split(';')[0]), yi.split(';')[1]) for yi in new_trace_data]
+
+    dropdown_values = [] if dropdown_values is None else dropdown_values
+    dropdown_options = [] if dropdown_options is None else dropdown_options
+
+    options = [option['value'] for option in dropdown_options]
+
+    if new_trace_name not in dropdown_values:
+        dropdown_values.append(new_trace_name)
+    if new_trace_name not in options:
+        dropdown_options.append({'label': new_trace_name, 'value': new_trace_name})
+
+    return [
+               dcc.Dropdown(id="dropdown-new-trace",
+                            multi=True,
+                            value=[])
+           ], "", current_traces, dropdown_values, dropdown_options
+
+
+@app.callback(
     [Output('graph', 'figure'),
      Output('memory-models', 'data')],
     [Input('dropdown-standards', 'value'),
-     Input('memory-std-xdata', 'data')],
-    [State('memory-standards', 'data')]
+     Input('memory-std-xdata', 'data'),
+     Input('dropdown-traces', 'value')],
+    [State('memory-standards', 'data'),
+     State('memory-traces', 'data')]
 )
-def update_graph(choosen_standards, xdata, ydata):
-    if not xdata or not ydata or not choosen_standards:
+def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces_ydata):
+    if not std_xdata or not std_ydata or not choosen_standards:
         raise PreventUpdate
 
     traces = []
     models = []
-    x_regression = np.arange(0, max(xdata) + 1, .01)
+    x_regression = np.arange(0, max(std_xdata) + 1, .01)
     colors_scale = create_and_mix_color_scale(36)
-    for i, std in enumerate(choosen_standards):
-        std_i = ydata[std]
+    for std in choosen_standards:
+        std_i = std_ydata[std]
 
-        if len(std_i) != len(xdata):
+        if len(std_i) != len(std_xdata):
             continue
 
         model = FourParametricLogistic()
-        model.fit(xdata, std_i)
+        model.fit(std_xdata, std_i)
 
         r2_annotation = ["" for _ in range(len(x_regression))]
-        r2_annotation[-1] = "R^2 = {}".format(np.round(model.r2(xdata, std_i), 4))
+        r2_annotation[-1] = "R^2 = {}".format(np.round(model.r2(std_xdata, std_i), 4))
 
         models.append(FourParametricLogisticEncoder().encode(model))
-
+        color = colors_scale.pop(0)
         traces.append(
             dict(
-                x=xdata,
+                x=std_xdata,
                 y=std_i,
                 mode='markers',
                 opacity=0.7,
                 marker={
                     'size': 10,
-                    'color': colors_scale[i]
+                    'color': color
                 },
                 name=std,
                 legendgroup=std,
@@ -428,12 +518,37 @@ def update_graph(choosen_standards, xdata, ydata):
                 textposition="top left",
                 mode='lines+text',
                 line={
-                    'color': colors_scale[i]
+                    'color': color
                 },
                 name=f"{std} curve",
                 legendgroup=std,
             )
         )
+
+        if choosen_traces:
+            for trace in choosen_traces:
+                trace_color = colors_scale.pop(0)
+
+                trace_i = traces_ydata[trace]
+                trace_labels = [ti[1] for ti in trace_i]
+                trace_values = [ti[0] for ti in trace_i]
+
+                x = model.solve(trace_values)
+
+                traces.append(
+                    dict(
+                        x=x,
+                        y=trace_values,
+                        text=trace_labels,
+                        mode='markers',
+                        opacity=0.7,
+                        marker={
+                            'size': 10,
+                            'color': trace_color
+                        },
+                        name=f'{trace} vs {std}',
+                    )
+                )
 
     return dict(
         data=traces,
