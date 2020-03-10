@@ -2,17 +2,16 @@ import base64
 import io
 
 import dash
-from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
+import numpy as np
+import pandas as pd
+from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 
-import pandas as pd
-
 from regression import FourParametricLogistic, FourParametricLogisticEncoder
-
-import numpy as np
+from tools import create_and_mix_color_scale
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -96,6 +95,7 @@ app.layout = html.Div([
                                 dcc.Input(
                                     id='input-new-standard',
                                     placeholder='Enter new standard name',
+                                    autoComplete="off",
                                     style={'width': '100%', 'margin': '0 0 5px 0'}
                                 ),
                                 html.Button(
@@ -345,7 +345,8 @@ def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dro
      State('dropdown-standards', 'options')
      ]
 )
-def update_standards(n_clicks, new_standard_data, new_standard_name, current_standards, dropdown_values, dropdown_options):
+def update_standards(n_clicks, new_standard_data, new_standard_name, current_standards, dropdown_values,
+                     dropdown_options):
     if int(n_clicks) < 1:
         raise PreventUpdate
 
@@ -390,8 +391,8 @@ def update_graph(choosen_standards, xdata, ydata):
     traces = []
     models = []
     x_regression = np.arange(0, max(xdata) + 1, .01)
-
-    for std in choosen_standards:
+    colors_scale = create_and_mix_color_scale(36)
+    for i, std in enumerate(choosen_standards):
         std_i = ydata[std]
 
         if len(std_i) != len(xdata):
@@ -399,7 +400,6 @@ def update_graph(choosen_standards, xdata, ydata):
 
         model = FourParametricLogistic()
         model.fit(xdata, std_i)
-
 
         r2_annotation = ["" for _ in range(len(x_regression))]
         r2_annotation[-1] = "R^2 = {}".format(np.round(model.r2(xdata, std_i), 4))
@@ -414,9 +414,10 @@ def update_graph(choosen_standards, xdata, ydata):
                 opacity=0.7,
                 marker={
                     'size': 10,
+                    'color': colors_scale[i]
                 },
                 name=std,
-                legendgroup=std
+                legendgroup=std,
             )
         )
         traces.append(
@@ -426,8 +427,11 @@ def update_graph(choosen_standards, xdata, ydata):
                 text=r2_annotation,
                 textposition="top left",
                 mode='lines+text',
+                line={
+                    'color': colors_scale[i]
+                },
                 name=f"{std} curve",
-                legendgroup=std
+                legendgroup=std,
             )
         )
 
