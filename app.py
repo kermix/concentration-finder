@@ -1,5 +1,6 @@
 import base64
 import io
+from collections import defaultdict
 
 import dash
 import dash_core_components as dcc
@@ -96,7 +97,7 @@ app.layout = html.Div([
             html.Details(
                 [
                     html.Summary('Standard and Model Details', style={'margin': '0 0 5px 0'}),
-                    html.P(id='p-standard-model-details')
+                    html.Div(id='div-standard-model-details')
                 ]
             ),
             html.Details(
@@ -130,7 +131,7 @@ app.layout = html.Div([
             html.Details(
                 [
                     html.Summary('Data Details', style={'margin': '0 0 5px 0'}),
-                    html.P(id='p-data-details')
+                    html.Div(id='div-data-details')
                 ]
             ),
             html.Details(
@@ -164,7 +165,7 @@ app.layout = html.Div([
         id='output-data-upload',
     ),
     dcc.Store(id='memory-std-xdata'),
-    dcc.Store(id='memory-std-ydata'),
+    dcc.Store(id='memory-std-ydata'),  # MOVE choosen standadards in to Store
     dcc.Store(id='memory-standards'),
     dcc.Store(id='memory-models'),
     dcc.Store(id='memory-traces-ydata'),
@@ -491,7 +492,8 @@ def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, drop
 
 @app.callback(
     [Output('graph', 'figure'),
-     Output('memory-models', 'data')],
+     Output('memory-models', 'data'),
+     Output('memory-traces-xdata', 'data')],
     [Input('dropdown-standards', 'value'),
      Input('memory-std-xdata', 'data'),
      Input('dropdown-traces', 'value')],
@@ -503,7 +505,8 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
         raise PreventUpdate
 
     traces = []
-    models = []
+    models = {}
+    traces_xdata = defaultdict(dict)
     x_regression = np.arange(0, max(std_xdata) + 1, .01)
     colors_scale = create_and_mix_color_scale(36)
     for std in choosen_standards:
@@ -515,10 +518,12 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
         model = FourParametricLogistic()
         model.fit(std_xdata, std_i)
 
+        r2 = model.r2(std_xdata, std_i)
         r2_annotation = ["" for _ in range(len(x_regression))]
-        r2_annotation[-1] = "R^2 = {}".format(np.round(model.r2(std_xdata, std_i), 4))
+        r2_annotation[-1] = "R^2 = {}".format(np.round(r2, 4))
 
-        models.append(FourParametricLogisticEncoder().encode(model))
+        A, B, C, D = model.residuals
+        models[std] = {"A": A, "B": B, "C": C, "D": D, "R^2": r2}
         color = colors_scale.pop(0)
         traces.append(
             dict(
@@ -559,6 +564,9 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
 
                 x = model.solve(trace_values)
 
+                traces_xdata[f'{trace} vs {std}']['x'] = x
+                traces_xdata[f'{trace} vs {std}']['y'] = trace_values
+
                 traces.append(
                     dict(
                         x=x,
@@ -576,7 +584,74 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
 
     return dict(
         data=traces,
-    ), models
+    ), models, traces_xdata
+
+
+@app.callback(
+    [Output('div-standard-model-details', 'children'),
+     Output('div-data-details', 'children')],
+    [Input('memory-models', 'data'),
+     Input('memory-std-xdata', 'data'),
+     Input('memory-traces-xdata', 'data')],
+    [State('memory-standards', 'data')]
+)
+def get_standard_and_models_details(models, std_x, traces_data, std_y):
+    content_std_models, content_data = [], []
+
+    if std_x:
+        content_std_models.append(
+            html.Div(
+                [
+                    html.B('X: '),
+                    f'{std_x}'
+                ]
+            )
+        )
+
+    if models:
+        for key in models.keys():
+            model = models[key]
+            content_std_models.append(
+                html.Div(
+                    [
+                        html.Div([html.B(f'{key}:')]),
+                        html.Div(
+                            [
+                                html.B('\tY:'), f'{std_y[key]}', html.Br(),
+                                html.B('\tParams: '), f'A={model["A"]}; B={model["B"]}; C={model["C"]}; D={model["D"]}',
+                                html.Br(),
+                                html.B(f'\tStats: '), f'R^2={model["R^2"]}'
+                            ], style={'margin': '0 0 0 10px'}
+                        )
+                    ]
+                )
+            )
+
+    if traces_data:
+        for key in traces_data.keys():
+            trace = traces_data[key]
+            for i, xi in enumerate(trace['x']):
+                if isinstance(xi, float):
+                    trace['x'][i] = round(xi,3)
+            content_data.append(
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.B(f'{key}:')
+                            ]
+                        ),
+                        html.Div(
+                            [
+                                html.B('X: '), f'{trace["x"]}', html.Br(),
+                                html.B('Y: '), f'{trace["y"]}'
+                            ], style={'margin': '0 0 0 10px'}
+                        )
+                    ]
+                )
+            )
+
+    return content_std_models, content_data
 
 
 if __name__ == '__main__':
