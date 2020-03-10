@@ -22,27 +22,10 @@ server = app.server
 app.config.suppress_callback_exceptions = True
 
 app.layout = html.Div([
-    dcc.Upload(
-        id='upload-data',
-        children=html.Div([
-            'Drag and Drop or ',
-            html.A('Select Files')
-        ]),
-        style={
-            'width': 'calc(100% - 10px)',
-            'height': '20px',
-            'lineHeight': '20px',
-            'borderWidth': '1px',
-            'borderStyle': 'dashed',
-            'borderRadius': '5px',
-            'textAlign': 'center',
-            'margin': '5px'
-        },
-        multiple=False
-    ),
     html.Div([
         html.Div([
             dcc.Graph(id='graph',
+                      style=dict(height='calc(65vh - 8px)'),
                       figure=dict(
                           layout=dict(
                               yaxis=dict(
@@ -100,7 +83,7 @@ app.layout = html.Div([
                         id='input-new-standard',
                         placeholder='Enter new standard curve name',
                         autoComplete="off",
-                        style={'width': '100%', 'margin': '0 0 5px 0'}
+                        style={'margin': '5px 5px 0 0', 'float': 'left'}
                     ),
                     html.Button(
                         "Add standard curve",
@@ -112,24 +95,26 @@ app.layout = html.Div([
             ),
             html.Details(
                 [
-                    html.Summary('Standard and Model Details'),
-                    html.P(id='p-standards-models')
+                    html.Summary('Standard and Model Details', style={'margin': '0 0 5px 0'}),
+                    html.P(id='p-standard-model-details')
                 ]
             ),
             html.Details(
                 [
-                    html.Summary("Data"),
+                    html.Summary("Data", style={'margin': '0 0 5px 0'}),
                     dcc.Dropdown(
                         placeholder="Data traces",
                         id="dropdown-traces",
-                        multi=True
+                        multi=True,
+                        style={'margin': '0 0 5px 0'}
                     ),
                     html.Div(
                         [
                             dcc.Dropdown(
                                 placeholder='New data trace absorbances',
                                 id="dropdown-new-trace",
-                                multi=True)
+                                multi=True,
+                                style={'margin': '0 0 5px 0'})
                         ], id='div-new-trace'),
                     dcc.Input(
                         id='input-new-trace',
@@ -142,9 +127,42 @@ app.layout = html.Div([
                                 style={'margin': "5px 0 0 0"}),
                 ],
             ),
+            html.Details(
+                [
+                    html.Summary('Data Details', style={'margin': '0 0 5px 0'}),
+                    html.P(id='p-data-details')
+                ]
+            ),
+            html.Details(
+                [
+                    html.Summary('Export Analysis', style={'margin': '0 0 5px 0'}),
+                ]
+            ),
         ], style={'flex': '1', 'overflowY': 'auto'})
-    ], style={'display': 'flex'}),
-    html.Div(id='output-data-upload'),
+    ], style={'display': 'flex', 'height': 'calc(65vh - 8px)'}),
+    html.Div(
+        [
+            dcc.Upload(
+                id='upload-data',
+                children=html.Div([
+                    'Drag and Drop or ',
+                    html.A('Select Files')
+                ]),
+                style={
+                    'width': 'calc(100% - 10px)',
+                    'height': '60px',
+                    'lineHeight': '60px',
+                    'borderWidth': '1px',
+                    'borderStyle': 'dashed',
+                    'borderRadius': '5px',
+                    'textAlign': 'center',
+                    'margin': '5px'
+                },
+                multiple=False
+            ),
+        ],
+        id='output-data-upload',
+    ),
     dcc.Store(id='memory-std-xdata'),
     dcc.Store(id='memory-std-ydata'),
     dcc.Store(id='memory-standards'),
@@ -187,7 +205,7 @@ def parse_contents(contents, filename, date):
                     editable=True,
                     row_deletable=True
                 ),
-            ], style={'flex': '3'}
+            ], style={'flex': '3', 'overflowY': 'auto'}
         ),
         html.Div(
             [
@@ -232,7 +250,7 @@ def parse_contents(contents, filename, date):
                     ], className="container"
                 ),
             ], style={'flex': '1'}),
-    ], style={'display': 'flex'})
+    ], style={'display': 'flex', 'height': 'calc(35vh - 8px)'})
 
 
 @app.callback(Output('output-data-upload', 'children'),
@@ -240,9 +258,11 @@ def parse_contents(contents, filename, date):
               [State('upload-data', 'filename'),
                State('upload-data', 'last_modified')])
 def update_output(content, name, date):
-    if content is not None:
-        children = [parse_contents(content, name, date)]
-        return children
+    if content is None:
+        raise PreventUpdate
+
+    children = [parse_contents(content, name, date)]
+    return children
 
 
 @app.callback(
@@ -414,6 +434,7 @@ def update_standards(n_clicks, new_standard_data, new_standard_name, current_sta
 
     return [
                dcc.Dropdown(
+                   placeholder='New standard curve absorbances',
                    id="dropdown-new-standard",
                    multi=True,
                    style={'margin': '0 0 5px 0'},
@@ -459,9 +480,12 @@ def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, drop
         dropdown_options.append({'label': new_trace_name, 'value': new_trace_name})
 
     return [
-               dcc.Dropdown(id="dropdown-new-trace",
-                            multi=True,
-                            value=[])
+               dcc.Dropdown(
+                   placeholder='New data trace absorbances',
+                   id="dropdown-new-trace",
+                   multi=True,
+                   value=[],
+                   style={'margin': '0 0 5px 0'})
            ], "", current_traces, dropdown_values, dropdown_options
 
 

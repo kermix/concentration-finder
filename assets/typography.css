@@ -1,3 +1,7 @@
 button{
     padding: 0 15px;
 }
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td, .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th{
+    height: 23px !important;
+}
