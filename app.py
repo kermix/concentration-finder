@@ -86,7 +86,7 @@ app.layout = html.Div([
                         style={'margin': '5px 5px 0 0', 'float': 'left'}
                     ),
                     html.Button(
-                        "Add standard curve",
+                        "Add",
                         id="button-std-y-add",
                         n_clicks=0,
                         style={'margin': "5px 0 0 0"}
@@ -121,7 +121,7 @@ app.layout = html.Div([
                         placeholder="Enter new data trace name",
                         autoComplete="off",
                         style={'margin': "5px 5px 0 0", 'float': 'left'}),
-                    html.Button("Add trace",
+                    html.Button("Add",
                                 id="button-trace-y-add",
                                 n_clicks=0,
                                 style={'margin': "5px 0 0 0"}),
@@ -167,8 +167,8 @@ app.layout = html.Div([
     dcc.Store(id='memory-std-ydata'),
     dcc.Store(id='memory-standards'),
     dcc.Store(id='memory-models'),
-    dcc.Store(id='memory-traces'),
-
+    dcc.Store(id='memory-traces-ydata'),
+    dcc.Store(id='memory-traces-xdata')
 ])
 
 
@@ -446,13 +446,13 @@ def update_standards(n_clicks, new_standard_data, new_standard_name, current_sta
 @app.callback(
     [Output('div-new-trace', 'children'),
      Output('input-new-trace', 'value'),
-     Output('memory-traces', 'data'),
+     Output('memory-traces-ydata', 'data'),
      Output('dropdown-traces', 'value'),
      Output('dropdown-traces', 'options')],
     [Input('button-trace-y-add', 'n_clicks')],
     [State('dropdown-new-trace', 'value'),
      State('input-new-trace', 'value'),
-     State('memory-traces', 'data'),
+     State('memory-traces-ydata', 'data'),
      State('dropdown-traces', 'value'),
      State('dropdown-traces', 'options')
      ]
@@ -496,7 +496,7 @@ def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, drop
      Input('memory-std-xdata', 'data'),
      Input('dropdown-traces', 'value')],
     [State('memory-standards', 'data'),
-     State('memory-traces', 'data')]
+     State('memory-traces-ydata', 'data')]
 )
 def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces_ydata):
     if not std_xdata or not std_ydata or not choosen_standards:
