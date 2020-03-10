@@ -10,7 +10,7 @@ from dash.exceptions import PreventUpdate
 
 import pandas as pd
 
-from regression import FourParametricLogistic
+from regression import FourParametricLogistic, FourParametricLogisticEncoder
 
 import numpy as np
 
@@ -58,43 +58,59 @@ app.layout = html.Div([
                 html.Label(
                     [
                         "Set concentrations",
-                        dash_table.DataTable(
-                            id='table-std-x',
-                            columns=[{"id": "x", "name": "Concentration"}],
-                            data=[
-                                dict(x=0) for _ in range(8)
+                        dcc.Dropdown(
+                            id='dropdown-concentrations',
+                            multi=True,
+                            style={'margin': '0 0 5px 0'}
+                        ),
+                        html.Div(
+                            [
+                                dcc.Input(
+                                    id='input-new-concentration',
+                                    placeholder='Enter new concentration and press enter',
+                                    debounce=True,
+                                    autoComplete="off",
+                                    style={'width': '100%', 'margin': '0 0 5px 0'}
+                                ),
                             ],
-                            editable=True,
-                            row_deletable=True),
-                        html.Button("Add x",
-                                    id='button-add-x-std',
+                            id="div-new-concentration",
+                        ),
+                        html.Label(
+                            [
+                                "Set Standard",
+                                dcc.Dropdown(
+                                    id="dropdown-standards",
+                                    multi=True,
+                                    style={'margin': '0 0 5px 0'}
+                                ),
+                                html.Div(
+                                    [
+                                        dcc.Dropdown(
+                                            id="dropdown-new-standard",
+                                            multi=True,
+                                            style={'margin': '0 0 5px 0'}
+                                        ),
+                                    ], id="div-new-standard"
+                                ),
+
+                                dcc.Input(
+                                    id='input-new-standard',
+                                    placeholder='Enter new standard name',
+                                    style={'width': '100%', 'margin': '0 0 5px 0'}
+                                ),
+                                html.Button(
+                                    "Add standard",
+                                    id="button-std-y-add",
                                     n_clicks=0,
-                                    style={'margin': "5px 5px 0 0"}),
-                        html.Button(
-                            "Update",
-                            id="button-std-x-update",
-                            n_clicks=0,
-                            style={'margin': "5px 0 0 0"})
+                                    style={'margin': "5px 0 0 0"}
+                                ),
+                            ]
+                        ),
                     ]
                 )
             ], style={'flex': '1', 'padding': '0 10px'}),
             html.Div(
                 [
-                    html.Label(
-                        [
-                            "Set Standard",
-                            dcc.Dropdown(
-                                id="dropdown-standard",
-                                multi=True
-                            ),
-                            html.Button(
-                                "Update standard",
-                                id="button-std-y-update",
-                                n_clicks=0,
-                                style={'margin': "5px 0 0 0"}
-                            ),
-                        ]
-                    ),
                     html.Label(
                         [
                             "Manage traces",
@@ -118,6 +134,9 @@ app.layout = html.Div([
     html.Div(id='output-data-upload'),
     dcc.Store(id='memory-std-xdata'),
     dcc.Store(id='memory-std-ydata'),
+    dcc.Store(id='memory-standards'),
+    dcc.Store(id='memory-models'),
+
 ])
 
 
@@ -238,43 +257,59 @@ def add_row(n_clicks, rows, columns):
 
 
 @app.callback(
+    [Output('div-new-concentration', 'children'),
+     Output('dropdown-concentrations', 'value'),
+     Output('dropdown-concentrations', 'options')],
+    [Input('input-new-concentration', 'value')],
+    [State('dropdown-concentrations', 'value'),
+     State('dropdown-concentrations', 'options')]
+)
+def add_concentration(concentation, dropdown_values, dropdown_options):
+    dropdown_values = [] if dropdown_values is None else dropdown_values
+    dropdown_options = [] if dropdown_options is None else dropdown_options
+
+    try:
+        concentation = float(concentation.replace(',', '.'))
+    except (ValueError, AttributeError):
+        raise PreventUpdate
+
+    options = [option['value'] for option in dropdown_options]
+
+    if concentation not in options:
+        dropdown_options.append({'label': concentation, 'value': concentation})
+    if concentation not in dropdown_values:
+        dropdown_values.append(concentation)
+
+    return [
+               dcc.Input(
+                   id='input-new-concentration',
+                   placeholder='Enter new concentration and press enter',
+                   debounce=True,
+                   value="",
+                   autoComplete='off',
+                   style={'width': "100%"}
+               )
+           ], dropdown_values, dropdown_options
+
+
+@app.callback(
     Output('memory-std-xdata', 'data'),
-    [Input('button-std-x-update', 'n_clicks')],
-    [State('table-std-x', 'data')])
-def update_std_x(n_clicks, xdata):
-    if int(n_clicks) < 1:
+    [Input('dropdown-concentrations', 'value')])
+def update_std_x(xdata):
+    if xdata is None:
         raise PreventUpdate
 
-    for i, xi in enumerate(xdata):
-        if isinstance(xi['x'], str):
-            xdata[i]['x'] = xi['x'].replace(',', '.')
-
-    new_xdata = sorted([float(item['x']) for item in xdata])
-
-    return new_xdata
+    return sorted([float(item) for item in xdata])
 
 
 @app.callback(
-    Output('table-std-x', 'data'),
-    [Input('button-add-x-std', 'n_clicks')],
-    [State('table-std-x', 'data'),
-     State('table-std-x', 'columns')])
-def add_row(n_clicks, rows, columns):
-    if int(n_clicks) < 1:
-        raise PreventUpdate
-
-    rows.append(dict(x=0))
-    return rows
-
-
-@app.callback(
-    [Output('dropdown-standard', 'value'),
-     Output('dropdown-standard', 'options')],
+    [Output('dropdown-new-standard', 'value'),
+     Output('dropdown-new-standard', 'options')],
     [Input('button-add-to-standard', 'n_clicks')],
     [State('table-data', 'selected_cells'),
      State('table-data', 'data'),
-     State('dropdown-standard', 'value'),
-     State('dropdown-standard', 'options')]
+     State('dropdown-new-standard', 'value'),
+     State('dropdown-new-standard', 'options')]
 )
 def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dropdown_options):
     if int(n_clicks) < 1:
@@ -291,75 +326,114 @@ def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dro
         value = str(data[row][column_id])
         if value not in options:
             dropdown_options.append({'label': value, 'value': value})
-        if value not in dropdown_values:
-            dropdown_values.append(value)
+        dropdown_values.append(value)
 
     return dropdown_values, dropdown_options
 
 
 @app.callback(
-    Output('memory-std-ydata', 'data'),
-    [Input('button-std-y-update', 'n_clicks')],
-    [State('dropdown-standard', 'value')]
+    [Output('div-new-standard', 'children'),
+     Output('input-new-standard', 'value'),
+     Output('memory-standards', 'data'),
+     Output('dropdown-standards', 'value'),
+     Output('dropdown-standards', 'options')],
+    [Input('button-std-y-add', 'n_clicks')],
+    [State('dropdown-new-standard', 'value'),
+     State('input-new-standard', 'value'),
+     State('memory-standards', 'data'),
+     State('dropdown-standards', 'value'),
+     State('dropdown-standards', 'options')
+     ]
 )
-def update_std_y(n_clicks, ydata):
+def update_standards(n_clicks, new_standard_data, new_standard_name, current_standards, dropdown_values, dropdown_options):
     if int(n_clicks) < 1:
         raise PreventUpdate
 
-    return [float(yi) for yi in ydata]
+    current_standards = {} if current_standards is None else current_standards
+
+    if new_standard_name in current_standards.keys():
+        raise PreventUpdate
+
+    current_standards[new_standard_name] = [float(yi) for yi in new_standard_data]
+
+    dropdown_values = [] if dropdown_values is None else dropdown_values
+    dropdown_options = [] if dropdown_options is None else dropdown_options
+
+    options = [option['value'] for option in dropdown_options]
+
+    if new_standard_name not in dropdown_values:
+        dropdown_values.append(new_standard_name)
+    if new_standard_name not in options:
+        dropdown_options.append({'label': new_standard_name, 'value': new_standard_name})
+
+    return [
+               dcc.Dropdown(
+                   id="dropdown-new-standard",
+                   multi=True,
+                   style={'margin': '0 0 5px 0'},
+                   value=[],
+               )
+           ], "", current_standards, dropdown_values, dropdown_options
 
 
 @app.callback(
-    Output('graph', 'figure'),
-    [Input('memory-std-xdata', 'data'),
-     Input('memory-std-ydata', 'data')]
+    [Output('graph', 'figure'),
+     Output('memory-models', 'data')],
+    [Input('dropdown-standards', 'value'),
+     Input('memory-std-xdata', 'data')],
+    [State('memory-standards', 'data')]
 )
-def update_graph(xdata, ydata):
-    if not xdata or not ydata:
-        raise PreventUpdate
-    if len(xdata) != len(ydata):
+def update_graph(choosen_standards, xdata, ydata):
+    if not xdata or not ydata or not choosen_standards:
         raise PreventUpdate
 
-    x_regression = np.arange(0, max(xdata) + 1, .1)
-    model = FourParametricLogistic()
-    model.fit(xdata, ydata)
+    traces = []
+    models = []
+    x_regression = np.arange(0, max(xdata) + 1, .01)
 
-    traces = [
-        dict(
-            x=xdata,
-            y=ydata,
-            mode='markers',
-            opacity=0.7,
-            marker={
-                'size': 10,
-            },
-            name="Standard"
-        ),
-        dict(
-            x=x_regression,
-            y=model.predict(x_regression),
-            mode='lines',
-            name="Std curve"
-        )
-    ]
+    for std in choosen_standards:
+        std_i = ydata[std]
 
-    layout = dict(
-        annotations=[
+        if len(std_i) != len(xdata):
+            continue
+
+        model = FourParametricLogistic()
+        model.fit(xdata, std_i)
+
+
+        r2_annotation = ["" for _ in range(len(x_regression))]
+        r2_annotation[-1] = "R^2 = {}".format(np.round(model.r2(xdata, std_i), 4))
+
+        models.append(FourParametricLogisticEncoder().encode(model))
+
+        traces.append(
             dict(
-                x=.95,
-                y=0.15,
-                showarrow=False,
-                text="R^2 = {}".format(np.round(model.r2(xdata, ydata), 4)),
-                xref="paper",
-                yref="paper"
+                x=xdata,
+                y=std_i,
+                mode='markers',
+                opacity=0.7,
+                marker={
+                    'size': 10,
+                },
+                name=std,
+                legendgroup=std
             )
-        ]
-    )
+        )
+        traces.append(
+            dict(
+                x=x_regression,
+                y=model.predict(x_regression),
+                text=r2_annotation,
+                textposition="top left",
+                mode='lines+text',
+                name=f"{std} curve",
+                legendgroup=std
+            )
+        )
 
     return dict(
         data=traces,
-        layout=layout
-    )
+    ), models
 
 
 if __name__ == '__main__':
