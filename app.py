@@ -232,7 +232,7 @@ def update_output(content, name, date):
 
 
 @app.callback(
-    Output('data-table', 'columns'),
+    Output('table-data', 'columns'),
     [Input('editing-columns-button', 'n_clicks')],
     [State('editing-columns-name', 'value'),
      State('table-data', 'columns')])
@@ -246,7 +246,7 @@ def update_columns(n_clicks, value, existing_columns):
 
 
 @app.callback(
-    Output('data-table', 'data'),
+    Output('table-data', 'data'),
     [Input('editing-rows-button', 'n_clicks')],
     [State('table-data', 'data'),
      State('table-data', 'columns')])
