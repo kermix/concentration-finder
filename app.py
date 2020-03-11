@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
+from flask import send_file
 
 from regression import FourParametricLogistic
 from tools import create_and_mix_color_scale
@@ -159,7 +160,7 @@ app.layout = html.Div([
                     'textAlign': 'center',
                     'margin': '5px'
                 },
-                multiple=False
+                multiple=True
             ),
         ],
         id='output-data-upload',
@@ -187,21 +188,36 @@ def parse_contents(contents, filename, date):
     try:
         if 'xls' in filename:
             # Assume that the user uploaded an excel file
-            df = pd.read_excel(io.BytesIO(decoded), skiprows=5)
+            df = pd.read_excel(io.BytesIO(decoded), skiprows=5, index_col=0)
             df = remove_empty(df)
-            df.rename(columns={'Unnamed: 0': 'Index'}, inplace=True)
+            # df.rename(columns={'Unnamed: 0': 'Index'}, inplace=True)4
+            return df
     except Exception as e:
         print(e)
-        return html.Div([
-            'There was an error processing this file.'
-        ])
+    raise PreventUpdate
 
+
+@app.callback(Output('output-data-upload', 'children'),
+              [Input('upload-data', 'contents')],
+              [State('upload-data', 'filename'),
+               State('upload-data', 'last_modified')])
+def update_output(list_of_contents, list_of_names, list_of_dates):
+    if list_of_contents is None:
+        raise PreventUpdate
+
+    dfs = [
+        parse_contents(c, n, d) for c, n, d in
+        zip(list_of_contents, list_of_names, list_of_dates)
+    ]
+    df_concat = pd.concat(dfs)
+    by_row_index = df_concat.groupby(df_concat.index)
+    df_means = by_row_index.mean().round(4).reset_index()
     return html.Div([
         html.Div(
             [
                 dash_table.DataTable(
-                    data=df.to_dict('records'),
-                    columns=[{"name": str(i), "id": str(i)} for i in df.columns],
+                    data=df_means.to_dict('records'),
+                    columns=[{"name": str(i), "id": str(i)} for i in df_means.columns],
                     id='table-data',
                     editable=True,
                     row_deletable=True
@@ -252,18 +268,6 @@ def parse_contents(contents, filename, date):
                 ),
             ], style={'flex': '1'}),
     ], style={'display': 'flex', 'height': '40vh'})
-
-
-@app.callback(Output('output-data-upload', 'children'),
-              [Input('upload-data', 'contents')],
-              [State('upload-data', 'filename'),
-               State('upload-data', 'last_modified')])
-def update_output(content, name, date):
-    if content is None:
-        raise PreventUpdate
-
-    children = [parse_contents(content, name, date)]
-    return children
 
 
 @app.callback(
@@ -556,7 +560,8 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
 
         if choosen_traces:
             for trace in choosen_traces:
-                trace_color = colors_scale.pop(0)
+                color_index = len(choosen_standards) if len(choosen_standards) <= len(colors_scale) else -1
+                trace_color = colors_scale.pop(color_index)
 
                 trace_i = traces_ydata[trace]
                 trace_labels = [ti[1] for ti in trace_i]
@@ -573,7 +578,7 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
                         y=trace_values,
                         text=trace_labels,
                         mode='markers',
-                        opacity=0.7,
+                        opacity=0.95,
                         marker={
                             'size': 10,
                             'color': trace_color
@@ -611,16 +616,17 @@ def get_standard_and_models_details(models, std_x, traces_data, std_y):
     if models:
         for key in models.keys():
             model = models[key]
+            A, B, C, D = model["A"], model["B"], model["C"], model["D"]
+            R2 = model["R^2"]
             content_std_models.append(
                 html.Div(
                     [
                         html.Div([html.B(f'{key}:')]),
                         html.Div(
                             [
-                                html.B('\tY:'), f'{std_y[key]}', html.Br(),
-                                html.B('\tParams: '), f'A={model["A"]}; B={model["B"]}; C={model["C"]}; D={model["D"]}',
-                                html.Br(),
-                                html.B(f'\tStats: '), f'R^2={model["R^2"]}'
+                                html.B('Y:'), f'{std_y[key]}', html.Br(),
+                                html.B('Params: '), f'A={A:.3f}; B={B:.3f}; C={C:.3f}; D={R2:.3f}', html.Br(),
+                                html.B(f'Stats: '), f'R^2={R2:.3f}'
                             ], style={'margin': '0 0 0 10px'}
                         )
                     ]
@@ -632,7 +638,7 @@ def get_standard_and_models_details(models, std_x, traces_data, std_y):
             trace = traces_data[key]
             for i, xi in enumerate(trace['x']):
                 if isinstance(xi, float):
-                    trace['x'][i] = round(xi,3)
+                    trace['x'][i] = round(xi, 3)
             content_data.append(
                 html.Div(
                     [
