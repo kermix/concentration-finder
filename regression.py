@@ -8,11 +8,11 @@ class FourParametricLogistic():
         return ((A-D)/(1.0+((x/C)**B))) + D
 
     def fit(self, x, y):
-        self.residuals, _ = curve_fit(FourParametricLogistic.__func, x, y)
-        return self.residuals
+        self.parameters, _ = curve_fit(FourParametricLogistic.__func, x, y)
+        return self.parameters
 
     def predict(self, x):
-        return FourParametricLogistic.__func(x, *self.residuals)
+        return FourParametricLogistic.__func(x, *self.parameters)
 
     def r2(self, x, y):
         x = np.array(x)
@@ -24,7 +24,7 @@ class FourParametricLogistic():
         return 1 - (ss_res/ss_tot)
 
     def solve(self, y):
-        A, B, C, D = self.residuals
+        A, B, C, D = self.parameters
         return C*((((A-D)/(y-D))-1)**(1/B))
 
 

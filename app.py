@@ -1,5 +1,10 @@
 import base64
 import io
+import os
+import redis
+import uuid
+import json
+
 from collections import defaultdict
 
 import dash
@@ -12,8 +17,14 @@ from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 from flask import send_file
 
+import openpyxl
+
 from regression import FourParametricLogistic
 from tools import create_and_mix_color_scale
+import export
+
+
+r = redis.from_url(os.environ.get("REDIS_URL"))
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -138,6 +149,9 @@ app.layout = html.Div([
             html.Details(
                 [
                     html.Summary('Export Analysis', style={'margin': '0 0 5px 0'}),
+                    html.Button("Generate", id='gen-export', n_clicks=0),
+                    html.A("Download", id='download-export', href='#')
+
                 ]
             ),
         ], style={'flex': '1', 'overflowY': 'auto', 'margin': '5px 0'})
@@ -170,7 +184,7 @@ app.layout = html.Div([
     dcc.Store(id='memory-standards'),
     dcc.Store(id='memory-models'),
     dcc.Store(id='memory-traces-ydata'),
-    dcc.Store(id='memory-traces-xdata')
+    dcc.Store(id='memory-traces-xdata'),
 ])
 
 
@@ -526,7 +540,7 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
         r2_annotation = ["" for _ in range(len(x_regression))]
         r2_annotation[-1] = "R^2 = {}".format(np.round(r2, 4))
 
-        A, B, C, D = model.residuals
+        A, B, C, D = model.parameters
         models[std] = {"A": A, "B": B, "C": C, "D": D, "R^2": r2}
         color = colors_scale.pop(0)
         traces.append(
@@ -659,6 +673,56 @@ def get_standard_and_models_details(models, std_x, traces_data, std_y):
 
     return content_std_models, content_data
 
+
+@app.callback(
+    Output('download-export', 'href'),
+    [Input('gen-export', 'n_clicks')],
+    [State('table-data', 'data'),
+     State('memory-models', 'data'),
+     State('memory-std-xdata', 'data'),
+     State('memory-standards', 'data')]
+)
+def generate_export(n_clicks, data_table_data, models, std_x, std_y):
+        if n_clicks > 0:
+            export_data = dict()
+
+            export_data["data_table"] = export.jsonify_data_table(data_table_data)
+            export_data["models"] = export.jsonify_models(models, std_x, std_y)
+
+            data_id = str(uuid.uuid4())
+            r.append(data_id, json.dumps(export_data))
+            return f"download/{data_id}"
+        return '#'
+
+@app.server.route('/download/<path:path>')
+def download_export(path):
+    export_data = json.loads(r.get(path))
+
+    file_io = io.BytesIO()
+    wb = openpyxl.Workbook()
+    writer = pd.ExcelWriter(file_io, engine='openpyxl')
+    writer.book = wb
+    writer.sheets = dict((ws.title, ws) for ws in wb.worksheets)
+
+    df = pd.read_json(export_data['data_table']).set_index('index')
+    df.to_excel(writer, sheet_name='Data')
+    writer.save()
+    wb.active = 1
+    ws = wb.active
+    export_model_data = json.loads(export_data["models"])
+    export.write_models_data(ws, export_model_data)
+    writer.save()
+
+
+
+    std = wb.get_sheet_by_name('Sheet')
+    wb.remove_sheet(std)
+    writer.save()
+    file_io.seek(0)
+    return  send_file(file_io,
+                       mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       attachment_filename='downloadFile.xlsx',
+                       as_attachment=True)
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)
