@@ -1,10 +1,8 @@
 import base64
 import io
-import os
-import redis
-import uuid
 import json
-
+import os
+import uuid
 from collections import defaultdict
 
 import dash
@@ -12,17 +10,16 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import numpy as np
+import openpyxl
 import pandas as pd
-from dash.dependencies import Input, Output, State
+import redis
+from dash.dependencies import Input, Output, State, ClientsideFunction
 from dash.exceptions import PreventUpdate
 from flask import send_file
 
-import openpyxl
-
+import export
 from regression import FourParametricLogistic
 from tools import create_and_mix_color_scale
-import export
-
 
 r = redis.from_url(os.environ.get("REDIS_URL"))
 
@@ -70,7 +67,7 @@ app.layout = html.Div([
                         ],
                         id="div-new-concentration",
                     )
-                ]
+                ], open=True
             ),
             html.Details(
                 [
@@ -84,8 +81,14 @@ app.layout = html.Div([
                     html.Div(
                         [
                             dcc.Dropdown(
-                                placeholder='New standard curve absorbances',
-                                id="dropdown-new-standard",
+                                placeholder='1: New standard curve absorbances',
+                                id="dropdown-new-standard-1",
+                                multi=True,
+                                style={'margin': '0 0 5px 0'}
+                            ),
+                            dcc.Dropdown(
+                                placeholder='2: New standard curve absorbances',
+                                id="dropdown-new-standard-2",
                                 multi=True,
                                 style={'margin': '0 0 5px 0'}
                             ),
@@ -104,7 +107,7 @@ app.layout = html.Div([
                         n_clicks=0,
                         style={'margin': "5px 0 0 0"}
                     ),
-                ]
+                ], id='standards'
             ),
             html.Details(
                 [
@@ -124,10 +127,11 @@ app.layout = html.Div([
                     html.Div(
                         [
                             dcc.Dropdown(
-                                placeholder='New data trace absorbances',
-                                id="dropdown-new-trace",
+                                placeholder=f'{i} New data trace absorbances',
+                                id=f"dropdown-new-trace-{i}",
                                 multi=True,
-                                style={'margin': '0 0 5px 0'})
+                                style={'margin': '0 0 5px 0'}
+                            ) for i in [1, 2]
                         ], id='div-new-trace'),
                     dcc.Input(
                         id='input-new-trace',
@@ -138,7 +142,7 @@ app.layout = html.Div([
                                 id="button-trace-y-add",
                                 n_clicks=0,
                                 style={'margin': "5px 0 0 0"}),
-                ],
+                ], id='data'
             ),
             html.Details(
                 [
@@ -150,7 +154,7 @@ app.layout = html.Div([
                 [
                     html.Summary('Export Analysis', style={'margin': '0 0 5px 0'}),
                     html.Button("Generate", id='gen-export', n_clicks=0),
-                    html.A("Download", id='download-export', href='#')
+                    html.A("Download", id='download-export', href='#', target='_blank')
 
                 ]
             ),
@@ -176,6 +180,7 @@ app.layout = html.Div([
                 },
                 multiple=True
             ),
+            dash_table.DataTable(id='table-data')
         ],
         id='output-data-upload',
     ),
@@ -242,42 +247,79 @@ def update_output(list_of_contents, list_of_names, list_of_dates):
             [
                 html.Div(
                     [
-                        html.P("Manage Data", style={"text-align": "right"}),
-                        html.Button(
-                            'To Standard',
-                            id='button-add-to-standard',
-                            n_clicks=0,
-                            style={'float': 'right', 'margin': '0 0 5px 5px'}
+                        html.Details(
+                            [
+                                html.Summary("Add to Standard", style={"text-align": "right"}),
+                                html.Div(
+                                    [
+                                        html.Button(
+                                            'To Standard 1',
+                                            id='button-add-to-standard-1',
+                                            n_clicks=0,
+                                            style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                        ),
+                                        html.Button(
+                                            'To Standard 2',
+                                            id='button-add-to-standard-2',
+                                            n_clicks=0,
+                                            style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                        ),
+                                    ], className='container w-100'
+                                )
+                            ], open=True
                         ),
-                        html.Button(
-                            'To data',
-                            id='button-add-to-trace',
-                            n_clicks=0,
-                            style={'float': 'right', 'margin': '0 0 5px 5px'}
+                        html.Details(
+                            [
+                                html.Summary('Add to data', style={"text-align": "right"}),
+                                html.Div(
+                                    [
+                                        html.Button(
+                                            'To data 1',
+                                            id='button-add-to-trace-1',
+                                            n_clicks=0,
+                                            style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                        ),
+                                        html.Button(
+                                            'To data 2',
+                                            id='button-add-to-trace-2',
+                                            n_clicks=0,
+                                            style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                        )
+                                    ], className='container w-100'
+                                )
+                            ], open=True
                         )
+
                     ], className="container"
                 ),
                 html.Div(
                     [
-                        html.P("Manage Table", style={"text-align": "right"}),
-                        dcc.Input(
-                            id='editing-columns-name',
-                            placeholder='Enter a column name...',
-                            value='',
-                            style={'float': 'right', 'margin': '0 0 5px 5px'}
-                        ),
-                        html.Button(
-                            'Add Column',
-                            id='editing-columns-button',
-                            n_clicks=0,
-                            style={'float': 'right', 'margin': '0 0 5px 5px'}
-                        ),
-                        html.Button(
-                            'Add Row',
-                            id='editing-rows-button',
-                            n_clicks=0,
-                            style={'float': 'right', 'margin': '0 0 5px 5px'}
-                        ),
+                        html.Details([
+                            html.Summary("Manage Table", style={"text-align": "right"}),
+                            html.Div(
+                                [
+
+                                    dcc.Input(
+                                        id='editing-columns-name',
+                                        placeholder='Enter a column name...',
+                                        value='',
+                                        style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                    ),
+                                    html.Button(
+                                        'Add Column',
+                                        id='editing-columns-button',
+                                        n_clicks=0,
+                                        style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                    ),
+                                    html.Button(
+                                        'Add Row',
+                                        id='editing-rows-button',
+                                        n_clicks=0,
+                                        style={'float': 'right', 'margin': '0 0 5px 5px'}
+                                    )
+                                ], className='container w-100'
+                            )
+                        ])
                     ], className="container"
                 ),
             ], style={'flex': '1'}),
@@ -352,18 +394,9 @@ def update_std_x(xdata):
     if xdata is None:
         raise PreventUpdate
 
-    return sorted([float(item) for item in xdata])
+    return [float(item) for item in xdata]
 
 
-@app.callback(
-    [Output('dropdown-new-standard', 'value'),
-     Output('dropdown-new-standard', 'options')],
-    [Input('button-add-to-standard', 'n_clicks')],
-    [State('table-data', 'selected_cells'),
-     State('table-data', 'data'),
-     State('dropdown-new-standard', 'value'),
-     State('dropdown-new-standard', 'options')]
-)
 def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dropdown_options):
     if int(n_clicks) < 1:
         raise PreventUpdate
@@ -384,15 +417,17 @@ def update_standard_dropdown(n_clicks, selected_data, data, dropdown_values, dro
     return dropdown_values, dropdown_options
 
 
-@app.callback(
-    [Output('dropdown-new-trace', 'value'),
-     Output('dropdown-new-trace', 'options')],
-    [Input('button-add-to-trace', 'n_clicks')],
-    [State('table-data', 'selected_cells'),
-     State('table-data', 'data'),
-     State('dropdown-new-trace', 'value'),
-     State('dropdown-new-trace', 'options')]
-)
+for i in [1, 2]:
+    app.callback(
+        [Output(f'dropdown-new-standard-{i}', 'value'),
+         Output(f'dropdown-new-standard-{i}', 'options')],
+        [Input(f'button-add-to-standard-{i}', 'n_clicks')],
+        [State('table-data', 'selected_cells'),
+         State('table-data', 'data'),
+         State(f'dropdown-new-standard-{i}', 'value'),
+         State(f'dropdown-new-standard-{i}', 'options')]
+    )(update_standard_dropdown)
+
 def update_trace_dropdown(n_clicks, selected_data, data, dropdown_values, dropdown_options):
     if int(n_clicks) < 1:
         raise PreventUpdate
@@ -406,13 +441,25 @@ def update_trace_dropdown(n_clicks, selected_data, data, dropdown_values, dropdo
         column_id = selected_cell['column_id']
 
         value = str(data[row][column_id])
-        index = str(data[row]['Index']) + str(column_id)
+        index = str(data[row]['index']) + str(column_id)
         value = ';'.join((value, index))
         if value not in options:
             dropdown_options.append({'label': value, 'value': value})
         dropdown_values.append(value)
 
     return dropdown_values, dropdown_options
+
+
+for i in [1, 2]:
+    app.callback(
+        [Output(f'dropdown-new-trace-{i}', 'value'),
+         Output(f'dropdown-new-trace-{i}', 'options')],
+        [Input(f'button-add-to-trace-{i}', 'n_clicks')],
+        [State('table-data', 'selected_cells'),
+         State('table-data', 'data'),
+         State(f'dropdown-new-trace-{i}', 'value'),
+         State(f'dropdown-new-trace-{i}', 'options')]
+    )(update_trace_dropdown)
 
 
 @app.callback(
@@ -422,16 +469,20 @@ def update_trace_dropdown(n_clicks, selected_data, data, dropdown_values, dropdo
      Output('dropdown-standards', 'value'),
      Output('dropdown-standards', 'options')],
     [Input('button-std-y-add', 'n_clicks')],
-    [State('dropdown-new-standard', 'value'),
+    [State('dropdown-new-standard-1', 'value'),
+     State('dropdown-new-standard-2', 'value'),
      State('input-new-standard', 'value'),
      State('memory-standards', 'data'),
      State('dropdown-standards', 'value'),
-     State('dropdown-standards', 'options')
+     State('dropdown-standards', 'options'),
      ]
 )
-def update_standards(n_clicks, new_standard_data, new_standard_name, current_standards, dropdown_values,
-                     dropdown_options):
+def update_standards(n_clicks, new_standard_data_1, new_standard_data_2, new_standard_name, current_standards,
+                     dropdown_values, dropdown_options):
     if int(n_clicks) < 1 or not new_standard_name:
+        raise PreventUpdate
+
+    if len(new_standard_data_1) != len(new_standard_data_2):
         raise PreventUpdate
 
     current_standards = {} if current_standards is None else current_standards
@@ -439,7 +490,10 @@ def update_standards(n_clicks, new_standard_data, new_standard_name, current_sta
     if new_standard_name in current_standards.keys():
         raise PreventUpdate
 
-    current_standards[new_standard_name] = [float(yi) for yi in new_standard_data]
+    current_standards[new_standard_name] = [(yi + yj) / 2.0 for yi, yj in zip(
+        [float(yi) for yi in new_standard_data_1],
+        [float(yi) for yi in new_standard_data_2]
+    )]
 
     dropdown_values = [] if dropdown_values is None else dropdown_values
     dropdown_options = [] if dropdown_options is None else dropdown_options
@@ -453,12 +507,12 @@ def update_standards(n_clicks, new_standard_data, new_standard_name, current_sta
 
     return [
                dcc.Dropdown(
-                   placeholder='New standard curve absorbances',
-                   id="dropdown-new-standard",
+                   placeholder=f'{i}: New standard curve absorbances',
+                   id=f"dropdown-new-standard-{i}",
                    multi=True,
                    style={'margin': '0 0 5px 0'},
                    value=[],
-               )
+               ) for i in [1, 2]
            ], "", current_standards, dropdown_values, dropdown_options
 
 
@@ -469,14 +523,15 @@ def update_standards(n_clicks, new_standard_data, new_standard_name, current_sta
      Output('dropdown-traces', 'value'),
      Output('dropdown-traces', 'options')],
     [Input('button-trace-y-add', 'n_clicks')],
-    [State('dropdown-new-trace', 'value'),
+    [State('dropdown-new-trace-1', 'value'),
+     State('dropdown-new-trace-2', 'value'),
      State('input-new-trace', 'value'),
      State('memory-traces-ydata', 'data'),
      State('dropdown-traces', 'value'),
      State('dropdown-traces', 'options')
      ]
 )
-def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, dropdown_values,
+def update_traces(n_clicks, new_trace_data_1, new_trace_data_2, new_trace_name, current_traces, dropdown_values,
                   dropdown_options):
     if int(n_clicks) < 1 or not new_trace_name:
         raise PreventUpdate
@@ -486,7 +541,11 @@ def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, drop
     if new_trace_name in current_traces.keys():
         raise PreventUpdate
 
-    current_traces[new_trace_name] = [(float(yi.split(';')[0]), yi.split(';')[1]) for yi in new_trace_data]
+    new_data_1 = [(float(yi.split(';')[0]), yi.split(';')[1]) for yi in new_trace_data_1]
+    new_data_2 = [(float(yi.split(';')[0]), yi.split(';')[1]) for yi in new_trace_data_2]
+
+    current_traces[new_trace_name] = [((yi[0] + yj[0]) / 2.0, ''.join((yi[1], yj[1]))) for yi, yj in
+                                      zip(new_data_1, new_data_2)]
 
     dropdown_values = [] if dropdown_values is None else dropdown_values
     dropdown_options = [] if dropdown_options is None else dropdown_options
@@ -500,11 +559,12 @@ def update_traces(n_clicks, new_trace_data, new_trace_name, current_traces, drop
 
     return [
                dcc.Dropdown(
-                   placeholder='New data trace absorbances',
-                   id="dropdown-new-trace",
+                   placeholder=f'{i}: New data trace absorbances',
+                   id=f"dropdown-new-trace-{i}",
                    multi=True,
                    value=[],
-                   style={'margin': '0 0 5px 0'})
+                   style={'margin': '0 0 5px 0'}
+               ) for i in [1, 2]
            ], "", current_traces, dropdown_values, dropdown_options
 
 
@@ -582,9 +642,10 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
                 trace_values = [ti[0] for ti in trace_i]
 
                 x = model.solve(trace_values)
-
                 traces_xdata[f'{trace} vs {std}']['x'] = x
                 traces_xdata[f'{trace} vs {std}']['y'] = trace_values
+                traces_xdata[f'{trace} vs {std}']['labels'] = trace_labels
+
 
                 traces.append(
                     dict(
@@ -614,7 +675,7 @@ def update_graph(choosen_standards, std_xdata, choosen_traces, std_ydata, traces
      Input('memory-traces-xdata', 'data')],
     [State('memory-standards', 'data')]
 )
-def get_standard_and_models_details(models, std_x, traces_data, std_y):
+def get_details(models, std_x, traces_data, std_y):
     content_std_models, content_data = [], []
 
     if std_x:
@@ -674,25 +735,42 @@ def get_standard_and_models_details(models, std_x, traces_data, std_y):
     return content_std_models, content_data
 
 
+for output, button_1, button_2 in [
+    ['standards', 'button-add-to-standard-1', 'button-add-to-standard-2'],
+    ['data', 'button-add-to-trace-1', 'button-add-to-trace-2']
+]:
+    app.clientside_callback(
+        output=Output(output, 'open'),
+        inputs=[Input(button_1, 'n_clicks'),
+                Input(button_2, 'n_clicks')],
+        clientside_function = ClientsideFunction(
+            namespace='clientside',
+            function_name ='open_details_on_btn_click'
+        )
+    )
+
 @app.callback(
     Output('download-export', 'href'),
     [Input('gen-export', 'n_clicks')],
     [State('table-data', 'data'),
      State('memory-models', 'data'),
      State('memory-std-xdata', 'data'),
-     State('memory-standards', 'data')]
+     State('memory-standards', 'data'),
+     State('memory-traces-xdata', 'data')]
 )
-def generate_export(n_clicks, data_table_data, models, std_x, std_y):
-        if n_clicks > 0:
-            export_data = dict()
+def generate_export(n_clicks, data_table_data, models, std_x, std_y, traces_data):
+    if n_clicks > 0:
+        export_data = dict()
 
-            export_data["data_table"] = export.jsonify_data_table(data_table_data)
-            export_data["models"] = export.jsonify_models(models, std_x, std_y)
+        export_data["data_table"] = export.jsonify_data_table(data_table_data)
+        export_data["models"] = export.jsonify_models(models, std_x, std_y)
+        export_data['results'] = export.jsonify_results(traces_data)
 
-            data_id = str(uuid.uuid4())
-            r.append(data_id, json.dumps(export_data))
-            return f"download/{data_id}"
-        return '#'
+        data_id = str(uuid.uuid4())
+        r.append(data_id, json.dumps(export_data))
+        return f"download/{data_id}"
+    return '#'
+
 
 @app.server.route('/download/<path:path>')
 def download_export(path):
@@ -707,22 +785,26 @@ def download_export(path):
     df = pd.read_json(export_data['data_table']).set_index('index')
     df.to_excel(writer, sheet_name='Data')
     writer.save()
-    wb.active = 1
+
+    wb.active = wb['Data']
     ws = wb.active
+
+    export_results_data = json.loads(export_data['results'])
+    export.write_results_data(ws, export_results_data)
+    writer.save()
+
     export_model_data = json.loads(export_data["models"])
     export.write_models_data(ws, export_model_data)
     writer.save()
 
-
-
-    std = wb.get_sheet_by_name('Sheet')
-    wb.remove_sheet(std)
+    wb.remove(wb['Sheet'])
     writer.save()
     file_io.seek(0)
-    return  send_file(file_io,
-                       mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                       attachment_filename='downloadFile.xlsx',
-                       as_attachment=True)
+    return send_file(file_io,
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                     attachment_filename=f'{path}.xlsx',
+                     as_attachment=True)
+
 
 if __name__ == '__main__':
     app.run_server(host='0.0.0.0', debug=True)
