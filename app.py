@@ -21,6 +21,8 @@ import export
 from regression import FourParametricLogistic
 from tools import create_and_mix_color_scale
 
+from openpyxl.chart import BarChart, Reference, Series
+
 r = redis.from_url(os.environ.get("REDIS_URL"))
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -200,7 +202,7 @@ def remove_empty(data_frame):
     return data_frame.loc[data_frame.index[~null_rows], data_frame.columns[~null_columns]]
 
 
-def parse_contents(contents, filename, date):
+def parse_contents(contents, filename):
     content_type, content_string = contents.split(',')
 
     decoded = base64.b64decode(content_string)
@@ -209,7 +211,6 @@ def parse_contents(contents, filename, date):
             # Assume that the user uploaded an excel file
             df = pd.read_excel(io.BytesIO(decoded), skiprows=5, index_col=0)
             df = remove_empty(df)
-            # df.rename(columns={'Unnamed: 0': 'Index'}, inplace=True)4
             return df
     except Exception as e:
         print(e)
@@ -225,7 +226,7 @@ def update_output(list_of_contents, list_of_names, list_of_dates):
         raise PreventUpdate
 
     dfs = [
-        parse_contents(c, n, d) for c, n, d in
+        parse_contents(c, n) for c, n, _ in
         zip(list_of_contents, list_of_names, list_of_dates)
     ]
     df_concat = pd.concat(dfs)
@@ -777,28 +778,30 @@ def download_export(path):
     export_data = json.loads(r.get(path))
 
     file_io = io.BytesIO()
-    wb = openpyxl.Workbook()
-    writer = pd.ExcelWriter(file_io, engine='openpyxl')
-    writer.book = wb
-    writer.sheets = dict((ws.title, ws) for ws in wb.worksheets)
+    writer = pd.ExcelWriter('temp.xlsx', engine='openpyxl')
 
     df = pd.read_json(export_data['data_table']).set_index('index')
     df.to_excel(writer, sheet_name='Data')
-    writer.save()
 
-    wb.active = wb['Data']
-    ws = wb.active
+    ws = writer.book.active
+    anchor_cell = openpyxl.utils.get_column_letter(ws.max_column + 2) + str(1)
 
     export_results_data = json.loads(export_data['results'])
     export.write_results_data(ws, export_results_data)
-    writer.save()
 
     export_model_data = json.loads(export_data["models"])
     export.write_models_data(ws, export_model_data)
-    writer.save()
 
-    wb.remove(wb['Sheet'])
-    writer.save()
+    writer.book.create_sheet('STD curves Data')
+    ws = writer.book['STD curves Data']
+
+
+    export.write_std_curves_data(ws, export_model_data, export_results_data)
+
+
+    export.plot_data(writer.book, anchor_cell)
+
+    writer.book.save(file_io)
     file_io.seek(0)
     return send_file(file_io,
                      mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
